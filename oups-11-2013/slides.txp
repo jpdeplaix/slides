@@ -1,0 +1,160 @@
+(* #FORMAT FormatSlides *)
+========================
+OCamlbuild par l'exemple
+------------------------
+Jacques-Pascal Deplaix
+========================
+
+=> Introduction
+
+\begin{slide}
+  \begin{center}
+    \size(8.){OCamlbuild par l'exemple}
+  \end{center}
+  \begin{center}
+    \size(3.){Jacques-Pascal Deplaix - OUPS}
+  \end{center}
+\end{slide}
+
+\begin{slide}
+  \Title{Introduction}
+
+  OCamlbuild is a build-system for OCaml among others (like ocp-build, obuild, omake, OMakefile, OCamlMakefile, …)
+
+  \begin{itemize}
+
+  \item Pros
+    \begin{itemize}
+    \item Distributed with OCaml
+    \item Configuration in OCaml
+    \item Simple (example: used in Real World OCaml)
+    \end{itemize}
+
+    \noindent
+
+  \item Cons
+    \begin{itemize}
+    \item Parallel builds
+    \item Unmaintened for years
+    \end{itemize}
+
+  \end{itemize}
+
+\end{slide}
+
+\begin{slide}
+  \Title{How does it works ?}
+
+  |– \_build
+
+  |– \_tags
+
+  |– a.ml
+
+  |– b.ml
+
+  |\_ myocamlbuild.ml
+
+  \noindent
+
+  \$ ocamlbuild a.native
+
+  (* explain the command *)
+
+  \noindent
+
+  \_tags: a simple config file that contains relations between files and tags
+  (* insert example *)
+  \_build: the build directory
+  (* insert blague sur les makefiles custom *)
+  myocamlbuild.ml: plugin file (in OCaml)
+
+\end{slide}
+
+\begin{slide}
+  \Title{What is a tag ?}
+
+###
+<*.ml>: package(js_of_ocaml.syntax), syntax(camlp4o), debug
+true: use_menhir
+"a.js": opt(2)
+###
+
+\end{slide}
+
+\begin{slide}
+  \Title{Example: the js\_of\_ocaml plugin}
+
+  \begin{env}(fun env -> {env with size = 3.5})
+### OCaml
+open Ocamlbuild_plugin
+
+let init () =
+  let dep = "%.byte" in
+  let prod = "%.js" in
+  let f env _ =
+    let dep = env dep in
+    let prod = env prod in
+    let link_opts = link_opts prod in
+    let tags = tags_of_pathname dep ++ "js_of_ocaml" in
+    Cmd (S [A "js_of_ocaml"; T tags; S link_opts; P dep; A "-o"; Px prod])
+  in
+  rule "js_of_ocaml: .byte -> .js" ~dep ~prod f;
+  flag ["js_of_ocaml"; "debug"] (S [A "-pretty"; A "-debuginfo"; A "-noinline"]);
+  pflag ["js_of_ocaml"] "opt" (fun n -> S [A "-opt"; A n])
+###
+  \end{env}
+
+\end{slide}
+
+\begin{slide}
+  \Title{Mise en avant du dynamisme}
+
+  (* mettre en avant le dynamisme *)
+
+\end{slide}
+
+\begin{slide}
+  \Title{Dispatching et utilisation}
+
+  \begin{env}(fun env -> {env with size = 3.5})
+### OCaml
+open Ocamlbuild_plugin
+
+module M = Ocamlbuild_eliom.Make(struct
+  let client_dir = "client"
+  let server_dir = "server"
+  let type_dir = "type"
+end)
+
+let () =
+  dispatch
+    (fun hook ->
+       dispatch_default hook;
+       M.dispatcher hook;
+       match hook with
+         | After_options ->
+             let f = function
+               | "src/client/cumulus.byte" -> "src/client/cumulus.js"
+               | x -> x
+             in
+             Options.targets := List.map f !Options.targets
+         | _ -> ()
+    )
+###
+  \end{env}
+
+\end{slide}
+
+\begin{slide}
+  \Title{Questions ?}
+
+  \begin{center}
+    « C'est pas faux ! »
+  \end{center}
+
+\end{slide}
+
+=<
+
+(* \item\begin{states}([0;1])Houlala\end{states} *)

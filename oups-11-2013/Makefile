@@ -1,0 +1,2 @@
+all:
+	patoline slides.txp
