@@ -99,6 +99,28 @@ asm __volatile__ (
 \end{slide}
 
 \begin{slide}
+  \Title{How to run litmus}
+
+  If you have an adventurous soul, these steps can compile the exemple given before:
+###
+  $ mkdir /tmp/test
+  $ litmus MP.litmus -o /tmp/test
+  $ cd /tmp/test
+  $ make
+  …
+  $ ./MP.exe
+  Test MP Allowed
+  Histogram (4 states)
+    500020:>1:EAX=0; 1:ECX=0;
+    24    *>1:EAX=1; 1:ECX=0;
+    5     :>1:EAX=0; 1:ECX=1;
+    499951:>1:EAX=1; 1:ECX=1;
+  Ok
+  Condition exists (1:EAX=1 /\ 1:ECX=0) is validated
+  Observation MP Sometimes 24 999976
+###
+
+  For more informations, see: http://diy.inria.fr/doc/litmus.html
 \end{slide}
 
 =<
