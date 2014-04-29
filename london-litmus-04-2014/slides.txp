@@ -1,0 +1,141 @@
+(* #FORMAT FormatSlides *)
+========================
+The C11 addition to Litmus
+------------------------
+Jacques-Pascal Deplaix
+========================
+
+=> Introduction
+
+\begin{slide}
+  \begin{center}
+    \size(8.){The C11 addition to Litmus}
+  \end{center}
+  \begin{center}
+    \size(3.){Jacques-Pascal Deplaix - London}
+  \end{center}
+\end{slide}
+
+(*
+\begin{slide}
+  \Title{Pre-introduction: What do we do ?}
+
+  TODO
+\end{slide}
+*)
+
+\begin{slide}
+  \Title{Introduction: What is Litmus ?}
+
+  Litmus is compiler which takes a « litmus test » and produces an executable that tests memory models
+
+  \noindent
+
+  A litmus test looks like this:
+
+  \noindent
+
+###
+X86 MP
+""
+
+{}
+
+ P0         | P1          ;
+ MOV [x],$1 | MOV EAX,[x] ;
+ MOV [y],$1 | MOV ECX,[y] ;
+
+exists (1:EAX=1 /\ 1:ECX=0)
+###
+
+\end{slide}
+
+\begin{slide}
+  \Title{The litmus compilation model}
+
+  The internal compilation model is the following:
+###
+                 +--------------+         +------------------------------+
+                 |              |         |                              |
+Litmus test ---->|   Parsing    |---------| Internal sauce (compilation) |--+
+                 |              |         |                              |  |
+                 +--------------+         +------------------------------+  |
++---------------------------------------------------------------------------+
+|  +------------------+       +------------+
+|  |                  |       |            |
++--| Backend (C code) |-------|     GCC    |------> Executable
+   |                  |       |            |
+   +------------------+       +------------+
+###
+\end{slide}
+
+\begin{slide}
+  \Title{The out: An example}
+
+###
+static void *P0(void *_vb) {
+  mbar();
+  …
+  for (int _i = _size_of_test-1 ; _i >= 0 ; _i--) {
+    barrier_wait(_th_id,_i,&barrier[_i]);
+asm __volatile__ (
+"\n"
+"#START _litmus_P0\n"
+"#_litmus_P0_0\n\t"
+"movl $1,%[x]\n"
+"#_litmus_P0_1\n\t"
+"movl $1,%[y]\n"
+"#END_litmus\n\t"
+:[x] "=m" (_a->x[_i]),[y] "=m" (_a->y[_i])
+:
+:"cc","memory"
+);
+  }
+  mbar();
+  return NULL;
+}
+###
+
+\end{slide}
+
+\begin{slide}
+\end{slide}
+
+=<
+
+=> Handling C
+
+\begin{slide}
+  \Title{Handling C: Motivations}
+
+  The motivations for the C frontend is the following:
+  \begin{itemize}
+  \item Handle multiple architectures with the same test
+  \item Can be used to test the C compiler itself
+  \item Be able to test the C model
+  \end{itemize}
+
+\end{slide}
+
+=<
+
+=> Conclusion & Questions
+
+\begin{slide}
+  \Title{Future}
+
+  Herd with C
+\end{slide}
+
+\begin{slide}
+  \Title{Questions ?}
+
+  \begin{center}
+    « C'est pas faux ! »
+  \end{center}
+
+\end{slide}
+
+=<
+
+(* \item\begin{states}([0;1])Houlala\end{states} *)
