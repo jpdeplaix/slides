@@ -134,7 +134,7 @@ asm __volatile__ (
 
   \noindent
 
-  Extra note: Worked for 6 months, 2 days per week for my third year (undergraduate) part-time
+  Extra note: Worked for 6 months (october to april), 2 days per week for my third year (undergraduate) part-time job
 
   \noindent
 
@@ -272,17 +272,26 @@ Generated assembler
 \begin{slide}
   \Title{Conclusion & Future}
 
+  Difficulties are mostly in the relative complexity of litmus (abstract the good thing at the right place, naming, not breaking the other tools, …).
+
+  \noindent
+
   Current state:
   \begin{itemize}
   \item Test the C model: no results for now
+  \item Test the C compiler: some results with atomics (not tested with the stable 4.9)
+  \item Still some things to do to improve the C frontend (see the branch maybev)
   \end{itemize}
 
   \noindent
 
   Future work:
   \begin{itemize}
-  \item Have a C frontend for Herd
-  \item Which implies to parse the given C code
+    \item Have a C frontend for Herd
+    \begin{itemize}
+      \item Implies to parse the given C code
+    \end{itemize}
+    \item …
   \end{itemize}
 \end{slide}
 
