@@ -130,6 +130,14 @@ asm __volatile__ (
 \begin{slide}
   \Title{Handling C: Motivations}
 
+  My work was to extend litmus with a new frontend: the C language.
+
+  \noindent
+
+  Extra note: Worked for 6 months, 2 days per week for my third year (undergraduate) part-time
+
+  \noindent
+
   The motivations for the C frontend is the following:
   \begin{itemize}
   \item Handle multiple architectures with the same test
@@ -137,6 +145,124 @@ asm __volatile__ (
   \item Be able to test the C model
   \end{itemize}
 
+  \noindent
+
+  As a side effect, it also allow us to test the new C11 feature: atomics
+
+\end{slide}
+
+\begin{slide}
+  \Title{The C frontend: An example}
+
+  We can give the following example that contains atomics:
+###
+C MP+poscscs
+"PodWWScSc RfeScSc PodRRScSc FreScSc"
+Prefetch=0:x=F,0:y=W,1:y=F,1:x=T
+Com=Rf Fr
+
+{}
+
+P0 (atomic_int* y, atomic_int* x) {
+    atomic_store(x,1);
+    atomic_store(y,1);
+}
+
+P1 (atomic_int* y, atomic_int* x) {
+    int r0 = atomic_load(y);
+    int r1 = atomic_load(x);
+}
+
+exists (1:r0=1 /\ 1:r1=0)
+###
+\end{slide}
+
+\begin{slide}
+  \Title{The C frontend: The result on ARM}
+
+###
+Generated assembler
+	@START _litmus_P1
+	dmb	sy
+	ldr	r2, [r2, r1]
+	dmb	sy
+	dmb	sy
+	ldr	r3, [r3, r1]
+	dmb	sy
+	@END _litmus_P1
+
+	@START _litmus_P0
+	dmb	sy
+	str	lr, [r2, r1]
+	dmb	sy
+	dmb	sy
+	str	lr, [r3, r1]
+	dmb	sy
+	@END _litmus_P0
+
+Test MP+poscscs Allowed
+Histogram (3 states)
+380879:>1:r0=0; 1:r1=0;
+1298853:>1:r0=0; 1:r1=1;
+320268:>1:r0=1; 1:r1=1;
+No
+###
+\end{slide}
+
+\begin{slide}
+  \Title{The C frontend: The result on X86}
+
+###
+Generated assembler
+	#START _litmus_P1
+	movl	(%rdx), %edx
+	movl	(%rax), %eax
+	#END _litmus_P1
+
+	#START _litmus_P0
+	movl	$1, (%rdx)
+	mfence
+	movl	$1, (%rax)
+	mfence
+	#END _litmus_P0
+
+Test MP+poscscs Allowed
+Histogram (3 states)
+2000001:>1:r0=0; 1:r1=0;
+126   :>1:r0=0; 1:r1=1;
+1999873:>1:r0=1; 1:r1=1;
+No
+###
+\end{slide}
+
+\begin{slide}
+  \Title{The C frontend: The result on PPC}
+
+###
+Generated assembler
+	#START _litmus_P1        Test MP+poscscs Allowed
+	sync                     Histogram (3 states)
+	lwz 9,0(3)               6747927:>1:r0=0; 1:r1=0;
+	cmpw 7,9,9               5063533:>1:r0=0; 1:r1=1;
+	bne- 7,$+4               4188540:>1:r0=1; 1:r1=1;
+	isync                    No
+	sync
+	rldicl 10,9,0,32
+	lwz 9,0(4)
+	cmpw 7,9,9
+	bne- 7,$+4
+	isync
+	rldicl 9,9,0,32
+	#END _litmus_P1
+
+	#START _litmus_P0
+	sync
+	li 9,1
+	stw 9,0(4)
+	sync
+	stw 9,0(3)
+	#END _litmus_P0
+###
 \end{slide}
 
 =<
@@ -144,9 +270,20 @@ asm __volatile__ (
 => Conclusion & Questions
 
 \begin{slide}
-  \Title{Future}
+  \Title{Conclusion & Future}
 
-  Herd with C
+  Current state:
+  \begin{itemize}
+  \item Test the C model: no results for now
+  \end{itemize}
+
+  \noindent
+
+  Future work:
+  \begin{itemize}
+  \item Have a C frontend for Herd
+  \item Which implies to parse the given C code
+  \end{itemize}
 \end{slide}
 
 \begin{slide}
