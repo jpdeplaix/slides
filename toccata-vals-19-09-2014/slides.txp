@@ -1,0 +1,177 @@
+(* #FORMAT FormatSlides *)
+========================
+A C backend for Why3
+------------------------
+Jacques-Pascal Deplaix
+========================
+
+=> Introduction
+
+\begin{slide}
+  \begin{center}
+    \size(8.){A C backend for Why3}
+
+    \noindent
+
+    \size(3.){Jacques-Pascal Deplaix - VALS}
+
+    \noindent
+
+    \bold{Abstract}: WhyML is a programming language syntactically close to OCaml but without higher order features.
+      It allows to prove programs automatically using automatic theorem provers.
+      I will present you my internship work on the WhyML compiler which is to allow the compiler to produce a running C program instead of an OCaml program.
+  \end{center}
+\end{slide}
+
+\begin{slide}
+  \tableOfContents
+\end{slide}
+
+\begin{slide}
+  \Title{Introduction: What is Why3 ?}
+\end{slide}
+
+\begin{slide}
+  \Title{Introduction: What is WhyML ?}
+\end{slide}
+
+\begin{slide}
+  \Title{WhyML: An example}
+\end{slide}
+
+\begin{slide}
+  \Title{WhyML: The compilation scheme}
+\end{slide}
+
+=<
+
+=> The work
+
+\begin{slide}
+  \tableOfContents
+\end{slide}
+
+\begin{slide}
+  \Title{A C backend: Motivations}
+
+  1) Extraction d'un programme (correct par construction, inverse de framaC)
+  2) Utilisable dans un code C existant & regions
+\end{slide}
+
+\begin{slide}
+  \Title{Difficultes}
+\end{slide}
+
+\begin{slide}
+  \Title{Solutions}
+  \begin{states}
+    a
+  \end{states}
+  \begin{states}
+    b
+  \end{states}
+\end{slide}
+
+=<
+
+=> Implementation choices
+
+\begin{slide}
+  \tableOfContents
+\end{slide}
+
+\begin{slide}
+  \Title{Polymorphism & value reprensatation}
+
+  1) toutes les valeurs sont des pointeurs (modulo int32)
+  2) typedef value
+  3) exemple:
+   « let ite b x y =
+       if b then x else y
+   »
+\end{slide}
+
+\begin{slide}
+  \Title{Variants}
+
+  1) Constructeurs constant, boxé mais constant (global)
+  2) Constructeurs non-constant = alloc mem
+  3) Expliquer les tags
+  3) exemple:
+    « type t 'a = Nil | Cons 'a (t 'a)
+      let cons l = Cons True l
+    »
+  4) Note sur les records
+\end{slide}
+
+\begin{slide}
+  \Title{GC}
+
+  1) Pourquoi a-t'on besoin d'un GC ?
+  2) Definition d'un GC concervatif
+  3) Note sur les regions (allocation sur la pile)
+\end{slide}
+
+\begin{slide}
+  \Title{Pattern matching}
+
+  1) Forme et description des patterns dans WhyML (as, or, pas de when)
+  2) Patterns déjà exaustifs
+  3) Compilation en patterns simple
+  4) Compilation en C (switch)
+  5) exemple:
+    « let rec length l = match l with
+        | Nil -> …
+        | Cons x r -> …
+        end
+    »
+\end{slide}
+
+\begin{slide}
+  \Title{Exceptions}
+
+  1) Definition: arguments, différences avec caml
+  2) Implementation: raise/try with, arguments, tags
+  3) Explication de setjmp/longjmp & jmp_buf
+  4) exemple:
+    « exception E int
+       let f x = raise (E x)
+       let g () = try f 42 with E x -> x end
+    »
+\end{slide}
+
+\begin{slide}
+  \Title{Partial applications & Inner functions}
+
+  1) Pas d'ordre supérieur, mais on a quand même besoin de cloture en cas de fonctions renvoyé comme résultat ou appliqué partiellement
+  2) montrer la structure
+  3) exemple:
+    « let f x =
+        let g y = x + y in
+        g
+
+      (f 2) 42
+    »
+\end{slide}
+
+\begin{slide}
+  \Title{The driver system}
+\end{slide}
+
+=<
+
+=> Conclusion
+
+\begin{slide}
+  \tableOfContents
+\end{slide}
+
+\begin{slide}
+  \Title{Conclusion & Future}
+\end{slide}
+
+\begin{slide}
+  \Title{Questions ?}
+\end{slide}
+
+=<
