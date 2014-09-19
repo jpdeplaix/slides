@@ -17,9 +17,10 @@ Jacques-Pascal Deplaix
 
     \noindent
 
-    \bold{Abstract}: WhyML is a programming language syntactically close to OCaml but without higher order features.
-      It allows to prove programs automatically using automatic theorem provers.
-      I will present you my internship work on the WhyML compiler which is to allow the compiler to produce a running C program instead of an OCaml program.
+    \bold{Abstract}: WhyML is a programming language syntactically close to OCaml
+      but without higher-order features. It allows the user to prove
+      programs using theorem provers. I will present my internship work on a
+      compiler that translates WhyML to C.
   \end{center}
 \end{slide}
 
@@ -28,48 +29,79 @@ Jacques-Pascal Deplaix
 \end{slide}
 
 \begin{slide}
-  \Title{Introduction: What is Why3 ?}
-\end{slide}
+  \Title{Introduction: What is WhyML?}
 
-\begin{slide}
-  \Title{Introduction: What is WhyML ?}
+  WhyML is a high level language being part of the Why3 platform which allows to verify programs giving goals and conditions, automatically using automated provers. Is is a rich language for specifications and programming.
+
+  The Why3 platform allows you to verify a given program using multiple provers and even allows you to prove manually using Coq or Isabelle.
 \end{slide}
 
 \begin{slide}
   \Title{WhyML: An example}
-\end{slide}
 
-\begin{slide}
-  \Title{WhyML: The compilation scheme}
-\end{slide}
+### OCaml
+module Demo
+  use import int.Fact
+  use import int.Int
 
-=<
-
-=> The work
-
-\begin{slide}
-  \tableOfContents
+  let rec fact x
+    requires { x >= 0 }
+    variant  { x }
+    ensures  { result = fact x }
+  = if x = 0 then 1 else x * fact (x-1)
+end
+###
 \end{slide}
 
 \begin{slide}
   \Title{A C backend: Motivations}
 
-  1) Extraction d'un programme (correct par construction, inverse de framaC)
-  2) Utilisable dans un code C existant & regions
+  First of all the motivation for extracting from WhyML is to have a program correct by construction.
+
+  \noindent
+
+  Motivations for my work:
+   
+  \noindent
+
+  \begin{itemize}
+  \item Allows to be used in a C program
+  \item Allows to avoid the use of GC in certain cases via the region system
+  \end{itemize}
 \end{slide}
 
 \begin{slide}
-  \Title{Difficultes}
-\end{slide}
+  \Title{Difficulties}
 
-\begin{slide}
-  \Title{Solutions}
-  \begin{states}
-    a
-  \end{states}
-  \begin{states}
-    b
-  \end{states}
+  Differences between C and WhyML introduce some well known difficulties:
+
+  \noindent
+
+  \begin{itemize}
+    \begin{states}([1; 2; 3; 4; 5; 6])
+      \item Polymorphism
+    \end{states}
+
+    \begin{states}([2; 3; 4; 5; 6])
+      \item Variants
+    \end{states}
+
+    \begin{states}([3; 4; 5; 6])
+      \item GC
+    \end{states}
+
+    \begin{states}([4; 5; 6])
+      \item Pattern matching
+    \end{states}
+
+    \begin{states}([5; 6])
+      \item Exceptions
+    \end{states}
+
+    \begin{states}([6])
+      \item Partial applications & Inner functions
+    \end{states}
+  \end{itemize}
 \end{slide}
 
 =<
@@ -81,81 +113,331 @@ Jacques-Pascal Deplaix
 \end{slide}
 
 \begin{slide}
-  \Title{Polymorphism & value reprensatation}
+  \Title{Polymorphism & value represatation}
 
-  1) toutes les valeurs sont des pointeurs (modulo int32)
-  2) typedef value
-  3) exemple:
-   « let ite b x y =
-       if b then x else y
-   »
+  \begin{states}([0])
+    Polymorphism requires a unified representation of data.
+
+    Solution: All values are pointers (but you can avoid boxing for int32 for example).
+
+    \noindent
+
+### OCaml
+typedef void* value;
+###
+
+    \noindent
+
+    Example:
+
+    \noindent
+
+### OCaml
+let ite (b : bool) (x : 'a) (y : 'a) : 'a = if b then x else y
+###
+
+    \noindent
+
+### OCaml
+value F_M_demo__Demo__ite(value b, value x, value y, value* Env) {
+    value X__183 = NULL;
+    if(b == T_why3__Bool__True)
+        X__183 = x;
+    else
+        X__183 = y;
+    return X__183;
+}
+###
+  \end{states}
 \end{slide}
 
 \begin{slide}
   \Title{Variants}
 
-  1) Constructeurs constant, boxé mais constant (global)
-  2) Constructeurs non-constant = alloc mem
-  3) Expliquer les tags
-  3) exemple:
-    « type t 'a = Nil | Cons 'a (t 'a)
-      let cons l = Cons True l
-    »
-  4) Note sur les records
+  \begin{states}([0])
+    Constructors with no arguments (constant) are global (like T\_why3\_\_Bool\_\_True in the previous slide)
+    Constructors with arguments are allocated.
+
+    \noindent
+
+    Each variant constructor contains a tag (an int) which is used to discriminate.
+
+    \noindent
+
+### OCaml
+  struct variant {int key; value* val;};
+###
+
+    \noindent
+
+    \bold{Note}: Records are a special case of variants
+
+    \noindent
+
+    \bold{Example}:
+
+    \noindent
+
+### OCaml
+type t 'a = Nil | Cons 'a (t 'a)
+
+let cons l = Cons True l
+###
+  \end{states}
+
+  \begin{states}([1])
+    Gives:
+
+    \noindent
+
+### OCaml
+struct variant X__22 = {0, NULL};
+struct variant* T_demo__Demo__Nil = &X__22;
+
+value F_M_demo__Demo__cons(value l, value* Env)
+{
+    value* X__186 = GC_malloc(sizeof(value) * 2);
+    X__186[0] = T_why3__Bool__True;
+    X__186[1] = l;
+    struct variant* X__187 = GC_malloc(sizeof(struct variant));
+    X__187->key = 1;
+    X__187->val = X__186;
+    return X__187;
+}
+###
+  \end{states}
 \end{slide}
 
 \begin{slide}
   \Title{GC}
 
-  1) Pourquoi a-t'on besoin d'un GC ?
-  2) Definition d'un GC concervatif
-  3) Note sur les regions (allocation sur la pile)
+  We need a GC in order to collect data which are allocated on the heap and which get out of the scope.
+
+  \noindent
+
+  \bold{Solution}: Boehm GC (conservative GC)
+
+  \noindent
+
+  A conservative is the easiest way if you need a GC. You just need to replace calls to malloc by GC\_malloc (for boehm) and it works.
+  It scans the heap and the stack searching for pointers. If a pointer is not referenced, it can be freed.
+
+  \noindent
+
+  WhyML has, internally, a region system which is used in order to track aliases. It can be used to avoid some allocations.
 \end{slide}
 
 \begin{slide}
   \Title{Pattern matching}
 
-  1) Forme et description des patterns dans WhyML (as, or, pas de when)
-  2) Patterns déjà exaustifs
-  3) Compilation en patterns simple
-  4) Compilation en C (switch)
-  5) exemple:
-    « let rec length l = match l with
-        | Nil -> …
-        | Cons x r -> …
-        end
-    »
+  \begin{states}([0])
+  Very close to OCaml pattern matching but without \sc{when} clauses.
+(*  2) Patterns déjà exaustifs *)
+  They are compiled using an internal function which compiles complicated patterns into simple patterns.
+  Compiled in C using switches on the tag.
+
+  \noindent
+
+  Example:
+
+  \noindent
+
+###
+let rec length l = match l with
+  | Nil -> …
+  | Cons x r -> …
+  end
+###
+  \end{states}
+
+  \begin{states}([1])
+  Gives:
+
+  \noindent
+
+### OCaml
+value F_M_demo__Demo__length(value l, value* Env) {
+  struct variant* X_189 = l;
+  value* X_190 = X_189->val;
+  value X_191 = NULL;
+  switch(X_189->key) {
+    case 0: … break;
+    case 1:
+      value x = X_190[0];
+      value r = X_190[1];
+      … break;
+  }
+  return X_191;
+}
+###
+  \end{states}
 \end{slide}
 
 \begin{slide}
   \Title{Exceptions}
 
-  1) Definition: arguments, différences avec caml
-  2) Implementation: raise/try with, arguments, tags
-  3) Explication de setjmp/longjmp & jmp_buf
-  4) exemple:
-    « exception E int
-       let f x = raise (E x)
-       let g () = try f 42 with E x -> x end
-    »
+  \begin{states}([0])
+    WhyML exceptions are Very close to OCaml exceptions too but cannot be used as first-class value.
+
+    \noindent
+
+    Solution: setjmp/longjmp
+
+    \noindent
+
+    Example:
+
+    \noindent
+###
+exception E int
+
+let f x raises {E -> true} = raise (E x)
+let g () = try f 42 with E x -> x end
+###
+  \end{states}
+
+  \begin{states}([1])
+    Gives:
+
+    \noindent
+
+### OCaml
+typedef char const * exn_tag;
+struct exn {exn_tag key; value val;};
+__thread struct exn* Exn = NULL;
+
+exn_tag M_demo__Demo__E = "M_demo.Demo.E";
+
+value F_M_demo__Demo__f(value x, value* Env, jmp_buf Exn_buf)
+{
+    struct exn* X__193 = GC_malloc(sizeof(struct exn));
+    X__193->key = M_demo__Demo__E;
+    X__193->val = x;
+    Exn = X__193;
+    longjmp(Exn_buf, 1);
+    return NULL;
+}
+###
+  \end{states}
+
+  \begin{states}([2])
+### OCaml
+value F_M_demo__Demo__g(value us, value* Env) {
+    jmp_buf X__195;
+    if(setjmp(X__195) == 0) {
+        value o = int_create_from_str("42", 10);
+        struct closure* X__198 = M_demo__Demo__f;
+        value X__199 = X__198->f;
+        value (*X__200)(value, value*, jmp_buf Exn_buf) = X__199;
+        return X__200(o, X__198->env, X__195);
+    }
+    else {
+        exn_tag X__202 = Exn->key;
+        if(X__202 == M_demo__Demo__E)
+            return Exn->val;
+        else
+            abort();
+    }
+}
+###
+  \end{states}
 \end{slide}
 
 \begin{slide}
   \Title{Partial applications & Inner functions}
 
-  1) Pas d'ordre supérieur, mais on a quand même besoin de cloture en cas de fonctions renvoyé comme résultat ou appliqué partiellement
-  2) montrer la structure
-  3) exemple:
-    « let f x =
-        let g y = x + y in
-        g
+  \begin{states}([0])
+    Even if WhyML has no higher order features, it allow to returns local functions which needs an environment.
+    In case of partial applications, a new function will be created dynamically which fully apply the original function with arguments already applied passed through the Env parameter.
 
-      (f 2) 42
-    »
+    \noindent
+
+    Solution: closure
+
+    \noindent
+
+### OCaml
+struct closure {value f; value* env;};
+###
+
+    \noindent
+
+    Example:
+
+    \noindent
+
+### OCaml
+let f1 x =
+  let g y = x + y in
+  g
+
+let f2 () = (f1 2) 42
+###
+  \end{states}
+
+  \begin{states}([1])
+### OCaml
+value F_g(value y, value* Env) {
+    return int_add(Env[0], y);
+}
+
+value F_M_demo__Demo__f1(value x, value* Env) {
+    value X__116[1] = {NULL};
+    struct closure* X__117 = GC_malloc(sizeof(struct closure));
+    value* X__118 = GC_malloc(sizeof(value) * 1);
+    X__118[0] = x;
+    X__117->f = F_g;
+    X__117->env = X__118;
+    X__116[0] = X__117;
+    return X__116[0];
+}
+
+struct closure X__121 = {F_M_demo__Demo__f1, NULL};
+struct closure* M_demo__Demo__f1 = &X__121;
+###
+  \end{states}
+
+  \begin{states}([2])
+### OCaml
+value F_M_demo__Demo__f2(value us, value* Env)
+{
+    value o = int_create_from_str("42", 10);
+    value o1 = int_create_from_str("2", 10);
+    struct closure* X__124 = M_demo__Demo__f1;
+    value X__125 = X__124->f;
+    value (*X__126)(value, value*) = X__125;
+    value X__127 = X__126(o1, X__124->env);
+
+    struct closure* X__128 = X__127;
+    value X__129 = X__128->f;
+    value (*X__130)(value, value*) = X__129;
+    value X__131 = X__130(o, X__128->env);
+    return X__131;
+}
+###
+  \end{states}
 \end{slide}
 
 \begin{slide}
   \Title{The driver system}
+
+  Example:
+
+  \noindent
+
+###
+theory int.Int
+  prelude "#include \"int.c\""
+
+  syntax function (+) "int_add(%1, %2)"
+  syntax function (-) "int_sub(%1, %2)"
+  syntax function (*) "int_mul(%1, %2)"
+end
+
+module mach.int.Int32
+  syntax val (*) "(value)((int32_t)%1 * (int32_t)%2)"
+end
+###
 \end{slide}
 
 =<
@@ -168,10 +450,26 @@ Jacques-Pascal Deplaix
 
 \begin{slide}
   \Title{Conclusion & Future}
+
+  Things which can still be done:
+  \begin{itemize}
+  \item Optimisations using regions
+  \item More precise types in the C code (instead of « value »)
+  \item Transformation using intermediate AST in order to simply/improve the code
+  \end{itemize}
+
+  \noindent
+
+  Beautiful internship, beautiful team. I had a great time here.
+  Special thanks to Jean-Christophe and Andrei.
 \end{slide}
 
 \begin{slide}
-  \Title{Questions ?}
+  \Title{Questions?}
+
+  \begin{center}
+    Thank you !
+  \end{center}
 \end{slide}
 
 =<
