@@ -1,0 +1,20 @@
+FILE = slides
+BUILDDIR = build
+
+PATOLINE = patoline
+
+all: $(BUILDDIR)
+	@cp $(FILE).txp $(BUILDDIR)
+	@cd $(BUILDDIR) && $(PATOLINE) $(FILE).txp
+	@cp $(BUILDDIR)/$(FILE).pdf .
+
+clean:
+	@rm -rf $(BUILDDIR)
+
+distclean: clean
+	@rm -f $(FILE).pdf
+
+$(BUILDDIR):
+	@mkdir $(BUILDDIR)
+
+.PHONY: all clean distclean
