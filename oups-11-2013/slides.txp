@@ -80,6 +80,15 @@ true: use_menhir
 "a.js": opt(2)
 ###
 
+  Two types of tags exists:
+  \begin{itemize}
+    \item Parametrized tags
+    \item Tags
+  \end{itemize}
+
+  A tag is an abstract identifier for one or several arguments inserted in commands at some places in
+  the compilation process.
+
 \end{slide}
 
 \begin{slide}

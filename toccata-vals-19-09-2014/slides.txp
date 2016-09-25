@@ -31,9 +31,13 @@ Jacques-Pascal Deplaix
 \begin{slide}
   \Title{Introduction: What is WhyML?}
 
-  WhyML is a high level language being part of the Why3 platform which allows to verify programs giving goals and conditions, automatically using automated provers. Is is a rich language for specifications and programming.
+  High level language being part of the Why3 platform.
 
-  The Why3 platform allows you to verify a given program using multiple provers and even allows you to prove manually using Coq or Isabelle.
+  Allows to verify programs giving goals and conditions, automatically using automated provers.
+
+  Rich language for specifications and programming.
+
+  Large choice of provers and allows manual proofs.
 \end{slide}
 
 \begin{slide}
@@ -48,7 +52,10 @@ module Demo
     requires { x >= 0 }
     variant  { x }
     ensures  { result = fact x }
-  = if x = 0 then 1 else x * fact (x-1)
+  = if x = 0 then
+      1
+    else
+      x * fact (x-1)
 end
 ###
 \end{slide}
@@ -56,17 +63,18 @@ end
 \begin{slide}
   \Title{A C backend: Motivations}
 
-  First of all the motivation for extracting from WhyML is to have a program correct by construction.
-
-  \noindent
-
-  Motivations for my work:
-   
-  \noindent
-
+  Why code extraction?
   \begin{itemize}
-  \item Allows to be used in a C program
-  \item Allows to avoid the use of GC in certain cases via the region system
+  \item to get a runnable correct-by-construction program
+  \item it is (probably) easier to execute WhyML than to prove C
+  \end{itemize}
+
+  \noindent
+
+  Why C code?
+  \begin{itemize}
+  \item verified libraries to use in C programs
+  \item thanks to the type system of WhyML we can avoid GC in some cases
   \end{itemize}
 \end{slide}
 
@@ -78,29 +86,12 @@ end
   \noindent
 
   \begin{itemize}
-    \begin{states}([1; 2; 3; 4; 5; 6])
-      \item Polymorphism
-    \end{states}
-
-    \begin{states}([2; 3; 4; 5; 6])
-      \item Variants
-    \end{states}
-
-    \begin{states}([3; 4; 5; 6])
-      \item GC
-    \end{states}
-
-    \begin{states}([4; 5; 6])
-      \item Pattern matching
-    \end{states}
-
-    \begin{states}([5; 6])
-      \item Exceptions
-    \end{states}
-
-    \begin{states}([6])
-      \item Partial applications & Inner functions
-    \end{states}
+  \item Polymorphism
+  \item Variants
+  \item GC
+  \item Pattern matching
+  \item Exceptions
+  \item Partial applications & Inner functions
   \end{itemize}
 \end{slide}
 
@@ -113,7 +104,7 @@ end
 \end{slide}
 
 \begin{slide}
-  \Title{Polymorphism & value represatation}
+  \Title{Polymorphism & value representation}
 
   \begin{states}([0])
     Polymorphism requires a unified representation of data.
@@ -186,7 +177,7 @@ let cons l = Cons True l
   \end{states}
 
   \begin{states}([1])
-    Gives:
+    \bold{Gives}:
 
     \noindent
 
@@ -211,7 +202,7 @@ value F_M_demo__Demo__cons(value l, value* Env)
 \begin{slide}
   \Title{GC}
 
-  We need a GC in order to collect data which are allocated on the heap and which get out of the scope.
+  A GC collects data which are allocated on the heap and which get out of the scope.
 
   \noindent
 
@@ -219,8 +210,7 @@ value F_M_demo__Demo__cons(value l, value* Env)
 
   \noindent
 
-  A conservative is the easiest way if you need a GC. You just need to replace calls to malloc by GC\_malloc (for boehm) and it works.
-  It scans the heap and the stack searching for pointers. If a pointer is not referenced, it can be freed.
+  Why?: It the easiest way
 
   \noindent
 
@@ -233,7 +223,8 @@ value F_M_demo__Demo__cons(value l, value* Env)
   \begin{states}([0])
   Very close to OCaml pattern matching but without \sc{when} clauses.
 (*  2) Patterns déjà exaustifs *)
-  They are compiled using an internal function which compiles complicated patterns into simple patterns.
+  Transformed into simple patterns with the help of Why3 API.
+
   Compiled in C using switches on the tag.
 
   \noindent
@@ -277,7 +268,7 @@ value F_M_demo__Demo__length(value l, value* Env) {
   \Title{Exceptions}
 
   \begin{states}([0])
-    WhyML exceptions are Very close to OCaml exceptions too but cannot be used as first-class value.
+    WhyML exceptions are similar to OCaml exceptions but cannot be used as first-class values.
 
     \noindent
 
@@ -291,7 +282,7 @@ value F_M_demo__Demo__length(value l, value* Env) {
 ###
 exception E int
 
-let f x raises {E -> true} = raise (E x)
+let f x raises { E } = raise (E x)
 let g () = try f 42 with E x -> x end
 ###
   \end{states}
@@ -347,8 +338,11 @@ value F_M_demo__Demo__g(value us, value* Env) {
   \Title{Partial applications & Inner functions}
 
   \begin{states}([0])
-    Even if WhyML has no higher order features, it allow to returns local functions which needs an environment.
-    In case of partial applications, a new function will be created dynamically which fully apply the original function with arguments already applied passed through the Env parameter.
+    No higher order features for programs.
+
+    But permits returning local functions which needs an environment.
+
+    In case of partial applications, a new function will be created dynamically which fully applies the original function with arguments already applied passed through the Env parameter.
 
     \noindent
 
@@ -421,6 +415,14 @@ value F_M_demo__Demo__f2(value us, value* Env)
 \begin{slide}
   \Title{The driver system}
 
+  Allows to:
+  \begin{itemize}
+  \item give implementation to non-implementable code
+  \item use simpler target code or primitives
+  \end{itemize}
+
+  \noindent
+
   Example:
 
   \noindent
@@ -455,7 +457,7 @@ end
   \begin{itemize}
   \item Optimisations using regions
   \item More precise types in the C code (instead of « value »)
-  \item Transformation using intermediate AST in order to simply/improve the code
+  \item Transformation using intermediate AST in order to simplify or optimize the code
   \end{itemize}
 
   \noindent
